@@ -18,7 +18,7 @@ namespace GameLib.LayeredImage
         {
             if (string.IsNullOrEmpty(version)) 
                 throw new Exception("Manifest validation failed: 'version' is missing.");
-                            
+                
             if (version != SUPPORTED_VERSION)
                 throw new Exception($"Unsupported LayeredImage manifest version '{version}'. Supported version: '{SUPPORTED_VERSION}'.");
 
@@ -50,7 +50,6 @@ namespace GameLib.LayeredImage
             if (nodes == null) return;
             foreach (var node in nodes)
             {
-                // Fallback support if 'type' is missing but it has an image path
                 bool isImage = node.type == "image" || (!string.IsNullOrEmpty(node.imagePath) && string.IsNullOrEmpty(node.type));
                 if (isImage && !string.IsNullOrEmpty(node.imagePath))
                 {
@@ -82,7 +81,6 @@ namespace GameLib.LayeredImage
             if (string.IsNullOrEmpty(name)) 
                 throw new Exception("Node validation failed: Node name is missing.");
 
-            // Legacy compatibility: Infer "group" if children exist but no type is specified.
             if (string.IsNullOrEmpty(type))
             {
                 type = (children != null && children.Count > 0) ? "group" : "image";

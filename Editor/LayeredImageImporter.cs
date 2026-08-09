@@ -25,8 +25,12 @@ namespace GameLib.LayeredImage
         {
             try
             {
+                if (pixelsPerUnit <= 0f)
+                {
+                    throw new Exception($"Invalid pixelsPerUnit ({pixelsPerUnit}). Value must be greater than zero.");
+                }
+
                 string json = File.ReadAllText(ctx.assetPath);
-                
                 var manifest = JsonConvert.DeserializeObject<LayeredImageManifest>(json);
 
                 if (manifest == null)
@@ -35,10 +39,8 @@ namespace GameLib.LayeredImage
                     return;
                 }
 
-                // 1. Validate the structure thoroughly
                 manifest.Validate();
 
-                // 2. Explicit Dependency Tracking (Authoritative)
                 string directory = Path.GetDirectoryName(ctx.assetPath);
                 foreach (string relativePath in manifest.GetAllImagePaths())
                 {
@@ -46,7 +48,6 @@ namespace GameLib.LayeredImage
                     ctx.DependsOnSourceAsset(fullPath);
                 }
 
-                // 3. Build Hierarchy
                 bool buildAsUI = renderMode == LayeredImageMode.UI;
                 var builder = new LayeredImageBuilder(manifest, ctx.assetPath, pixelsPerUnit, buildAsUI);
                 GameObject root = builder.Build(ctx);
@@ -63,8 +64,15 @@ namespace GameLib.LayeredImage
             }
             catch (Exception ex)
             {
-                // Catch all validation and missing-asset exceptions to fail the import gracefully
                 ctx.LogImportError($"LayeredImage Import Error: {ex.Message}");
+            }
+        }
+
+        private void OnValidate()
+        {
+            if (pixelsPerUnit <= 0f)
+            {
+                pixelsPerUnit = 0.01f;
             }
         }
     }
