@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f454932970c7cee41baa769bba410140, type: 3}
+  m_Name: ModuleManifest(LayeredImage)
+  m_EditorClassIdentifier: GameLib::GameLib.GameLibModuleManifest
+  Name: LayeredImage
+  Version: 1.0.0.a
+  Icon: {fileID: 21300000, guid: 8ac808aa5bca95e45b4732910c01b9f6, type: 3}
+  Description: "LayeredImage \u2014 An image-editor-agnostic Unity importer for assembling
+    layered artwork from Photoshop, Krita, or other image-editing workflows.\r\n"
+  Tags:
+  - system
+  - art
