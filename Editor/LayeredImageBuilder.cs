@@ -35,7 +35,6 @@ namespace GameLib.LayeredImage
                 rect.sizeDelta = new Vector2(_manifest.document.width, _manifest.document.height);
             }
 
-            // Krita/Photoshop typically export top-down (top visual layer is first).
             _sortingOrderTracker = 0; 
 
             if (_manifest.children != null)
@@ -80,11 +79,10 @@ namespace GameLib.LayeredImage
                 {
                     var image = go.AddComponent<Image>();
                     image.sprite = sprite;
-                    image.SetNativeSize();
 
                     var rect = go.GetComponent<RectTransform>();
+                    rect.sizeDelta = new Vector2(node.bounds.width, node.bounds.height);
                     
-                    // Native UI Layout mapping (Top-Left origin assumption for 2D software)
                     rect.pivot = new Vector2(0, 1);
                     rect.anchorMin = new Vector2(0, 1);
                     rect.anchorMax = new Vector2(0, 1);
@@ -96,7 +94,6 @@ namespace GameLib.LayeredImage
                     renderer.sprite = sprite;
                     renderer.sortingOrder = _sortingOrderTracker++;
 
-                    // World Space conversion utilizing PixelsPerUnit
                     float docHalfWidth = _manifest.document.width / 2f;
                     float docHalfHeight = _manifest.document.height / 2f;
                     
