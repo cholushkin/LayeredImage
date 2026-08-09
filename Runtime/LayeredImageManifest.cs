@@ -7,6 +7,8 @@ namespace GameLib.LayeredImage
     [Serializable]
     public class LayeredImageManifest
     {
+        public const string SUPPORTED_VERSION = "1";
+
         public string version;
         public string name;
         public DocumentInfo document;
@@ -16,6 +18,10 @@ namespace GameLib.LayeredImage
         {
             if (string.IsNullOrEmpty(version)) 
                 throw new Exception("Manifest validation failed: 'version' is missing.");
+                            
+            if (version != SUPPORTED_VERSION)
+                throw new Exception($"Unsupported LayeredImage manifest version '{version}'. Supported version: '{SUPPORTED_VERSION}'.");
+
             if (string.IsNullOrEmpty(name)) 
                 throw new Exception("Manifest validation failed: 'name' is missing.");
             if (document == null) 
