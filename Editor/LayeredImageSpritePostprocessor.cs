@@ -49,6 +49,9 @@ namespace GameLib.LayeredImage
                 if (textureImporter.textureType != TextureImporterType.Sprite)
                 {
                     textureImporter.textureType = TextureImporterType.Sprite;
+                    textureImporter.spriteImportMode = SpriteImportMode.Single;
+                    textureImporter.textureCompression = TextureImporterCompression.Uncompressed;
+                    textureImporter.mipmapEnabled = false;
                 }
                 
                 int width, height;
