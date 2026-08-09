@@ -1,67 +1,117 @@
-// todo: Add serialization validation to catch missing JSON fields
-// idea: Support animation frames or multipage exports in the future
-
 using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using UnityEngine;
 
-[Serializable]
-public sealed class LayeredImageManifest
+namespace GameLib.LayeredImage
 {
-    [JsonProperty("version")] 
-    public int Version { get; set; }
-    
-    [JsonProperty("name")] 
-    public string Name { get; set; }
-    
-    [JsonProperty("document")] 
-    public LayeredImageDocument Document { get; set; }
-    
-    [JsonProperty("children")] 
-    public List<LayeredImageNode> Children { get; set; }
-}
+    [Serializable]
+    public class LayeredImageManifest
+    {
+        public string version;
+        public string name;
+        public DocumentInfo document;
+        public List<NodeInfo> children = new List<NodeInfo>();
 
-[Serializable]
-public sealed class LayeredImageDocument
-{
-    [JsonProperty("width")] 
-    public int Width { get; set; }
-    
-    [JsonProperty("height")] 
-    public int Height { get; set; }
-}
+        public void Validate()
+        {
+            if (string.IsNullOrEmpty(version)) 
+                throw new Exception("Manifest validation failed: 'version' is missing.");
+            if (string.IsNullOrEmpty(name)) 
+                throw new Exception("Manifest validation failed: 'name' is missing.");
+            if (document == null) 
+                throw new Exception("Manifest validation failed: 'document' is missing.");
+            if (document.width <= 0 || document.height <= 0) 
+                throw new Exception($"Manifest validation failed: Invalid document dimensions ({document.width}x{document.height}). Dimensions must be > 0.");
 
-[Serializable]
-public sealed class LayeredImageNode
-{
-    [JsonProperty("name")] 
-    public string Name { get; set; }
-    
-    [JsonProperty("type")] 
-    public string Type { get; set; }
-    
-    [JsonProperty("bounds")] 
-    public LayeredImageBounds Bounds { get; set; }
-    
-    [JsonProperty("image")] 
-    public string Image { get; set; }
-    
-    [JsonProperty("children")] 
-    public List<LayeredImageNode> Children { get; set; }
-}
+            if (children != null)
+            {
+                foreach (var child in children)
+                {
+                    child.Validate();
+                }
+            }
+        }
 
-[Serializable]
-public sealed class LayeredImageBounds
-{
-    [JsonProperty("x")] 
-    public int X { get; set; }
-    
-    [JsonProperty("y")] 
-    public int Y { get; set; }
-    
-    [JsonProperty("width")] 
-    public int Width { get; set; }
-    
-    [JsonProperty("height")] 
-    public int Height { get; set; }
+        public IEnumerable<string> GetAllImagePaths()
+        {
+            var paths = new List<string>();
+            CollectPaths(children, paths);
+            return paths;
+        }
+
+        private void CollectPaths(List<NodeInfo> nodes, List<string> paths)
+        {
+            if (nodes == null) return;
+            foreach (var node in nodes)
+            {
+                // Fallback support if 'type' is missing but it has an image path
+                bool isImage = node.type == "image" || (!string.IsNullOrEmpty(node.imagePath) && string.IsNullOrEmpty(node.type));
+                if (isImage && !string.IsNullOrEmpty(node.imagePath))
+                {
+                    paths.Add(node.imagePath);
+                }
+                CollectPaths(node.children, paths);
+            }
+        }
+    }
+
+    [Serializable]
+    public class DocumentInfo
+    {
+        public int width;
+        public int height;
+    }
+
+    [Serializable]
+    public class NodeInfo
+    {
+        public string name;
+        public string type;
+        public BoundsInfo bounds;
+        public string imagePath;
+        public List<NodeInfo> children = new List<NodeInfo>();
+
+        public void Validate()
+        {
+            if (string.IsNullOrEmpty(name)) 
+                throw new Exception("Node validation failed: Node name is missing.");
+
+            // Legacy compatibility: Infer "group" if children exist but no type is specified.
+            if (string.IsNullOrEmpty(type))
+            {
+                type = (children != null && children.Count > 0) ? "group" : "image";
+            }
+
+            if (type == "image")
+            {
+                if (bounds == null) 
+                    throw new Exception($"Image node '{name}' is missing 'bounds'.");
+                if (bounds.width <= 0 || bounds.height <= 0) 
+                    throw new Exception($"Image node '{name}' has invalid bounds ({bounds.width}x{bounds.height}).");
+                if (string.IsNullOrEmpty(imagePath)) 
+                    throw new Exception($"Image node '{name}' is missing 'imagePath'.");
+            }
+            else if (type != "group")
+            {
+                throw new Exception($"Unsupported node type '{type}' on node '{name}'. Only 'image' and 'group' are currently supported.");
+            }
+
+            if (children != null)
+            {
+                foreach (var child in children)
+                {
+                    child.Validate();
+                }
+            }
+        }
+    }
+
+    [Serializable]
+    public class BoundsInfo
+    {
+        public int x;
+        public int y;
+        public int width;
+        public int height;
+    }
 }

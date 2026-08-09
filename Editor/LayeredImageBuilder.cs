@@ -1,129 +1,119 @@
-// todo: Support SortingGroup for complex layering scenarios
-// todo: Implement Z-depth stacking instead of sortingOrder
-// idea: Add optional sprite atlas integration based on output folder
-
+using System;
+using System.IO;
+using UnityEditor;
+using UnityEditor.AssetImporters;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEditor;
-using System.IO;
-using UnityEditor.AssetImporters;
 
-public static class LayeredImageBuilder
+namespace GameLib.LayeredImage
 {
-    public enum ImportMode
+    public class LayeredImageBuilder
     {
-        UI,
-        SpriteRenderer
-    }
-
-    #region Implementation
-    
-    public static GameObject Build(
-        LayeredImageManifest manifest,
-        string jsonAssetPath,
-        ImportMode mode,
-        float pixelsPerUnit,
-        AssetImportContext ctx)
-    {
-        Debug.Assert(manifest != null, "Manifest cannot be null");
+        private readonly LayeredImageManifest _manifest;
+        private readonly string _assetPath;
+        private readonly float _ppu;
+        private readonly bool _isUI;
         
-        string rootName = string.IsNullOrEmpty(manifest.Name) ? "LayeredImage" : manifest.Name;
-        var root = new GameObject(rootName);
+        private int _sortingOrderTracker = 0;
 
-        if (mode == ImportMode.UI)
+        public LayeredImageBuilder(LayeredImageManifest manifest, string assetPath, float ppu, bool isUI)
         {
-            root.AddComponent<RectTransform>();
+            _manifest = manifest;
+            _assetPath = assetPath;
+            _ppu = ppu;
+            _isUI = isUI;
         }
 
-        if (manifest.Children == null || manifest.Children.Count == 0)
+        public GameObject Build(AssetImportContext ctx)
         {
-            Debug.LogWarning($"[LayeredImageBuilder] Root '{rootName}' has no children. Prefab will be empty.");
+            GameObject root = new GameObject(_manifest.name);
+            
+            if (_isUI)
+            {
+                var rect = root.AddComponent<RectTransform>();
+                rect.sizeDelta = new Vector2(_manifest.document.width, _manifest.document.height);
+            }
+
+            // Ordering Contract: Top-down traversal assigns increasing sorting layers.
+            // Earlier children in JSON render behind later children.
+            _sortingOrderTracker = 0; 
+
+            if (_manifest.children != null)
+            {
+                foreach (var childNode in _manifest.children)
+                {
+                    BuildNode(childNode, root.transform);
+                }
+            }
+
             return root;
         }
 
-        int sortingOrder = 0;
-        foreach (var child in manifest.Children)
+        private void BuildNode(NodeInfo node, Transform parent)
         {
-            sortingOrder = BuildNodeRecursive(child, root.transform, jsonAssetPath, mode, pixelsPerUnit, manifest, sortingOrder, ctx);
-        }
-
-        return root;
-    }
-
-    private static int BuildNodeRecursive(
-        LayeredImageNode node,
-        Transform parent,
-        string jsonAssetPath,
-        ImportMode mode,
-        float ppu,
-        LayeredImageManifest manifest,
-        int sortingOrder,
-        AssetImportContext ctx)
-    {
-        if (node.Children != null && node.Children.Count > 0)
-        {
-            var group = new GameObject(node.Name);
-            group.transform.SetParent(parent, false);
-
-            if (mode == ImportMode.UI)
-            {
-                group.AddComponent<RectTransform>();
-            }
-
-            foreach (var child in node.Children)
-            {
-                sortingOrder = BuildNodeRecursive(child, group.transform, jsonAssetPath, mode, ppu, manifest, sortingOrder, ctx);
-            }
-
-            return sortingOrder;
-        }
-
-        if (node.Type == "image")
-        {
-            string imagePath = Path.Combine(Path.GetDirectoryName(jsonAssetPath) ?? string.Empty, node.Image).Replace("\\", "/");
-            
-            ctx?.DependsOnSourceAsset(imagePath);
-
-            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(imagePath);
-            if (sprite == null)
-            {
-                Debug.LogWarning($"[LayeredImageBuilder] Sprite missing or unimported at: {imagePath}");
-            }
-
-            var go = new GameObject(node.Name);
+            GameObject go = new GameObject(node.name);
             go.transform.SetParent(parent, false);
 
-            float centerX = node.Bounds.X + node.Bounds.Width * 0.5f;
-            float centerY = node.Bounds.Y + node.Bounds.Height * 0.5f;
-            float docCenterX = manifest.Document?.Width * 0.5f ?? 0f;
-            float docCenterY = manifest.Document?.Height * 0.5f ?? 0f;
-
-            float localX = centerX - docCenterX;
-            float localY = docCenterY - centerY;
-
-            if (mode == ImportMode.UI)
+            if (node.type == "group")
             {
-                var rect = go.AddComponent<RectTransform>();
-                var image = go.AddComponent<Image>();
-                
-                if (sprite != null) image.sprite = sprite;
-
-                rect.anchoredPosition = new Vector2(localX, localY);
-                rect.sizeDelta = new Vector2(node.Bounds.Width, node.Bounds.Height);
+                if (_isUI)
+                {
+                    var rect = go.AddComponent<RectTransform>();
+                    rect.anchorMin = Vector2.zero;
+                    rect.anchorMax = Vector2.one;
+                    rect.offsetMin = Vector2.zero;
+                    rect.offsetMax = Vector2.zero;
+                }
             }
-            else
+            else if (node.type == "image")
             {
-                var renderer = go.AddComponent<SpriteRenderer>();
-                
-                if (sprite != null) renderer.sprite = sprite;
-                
-                renderer.sortingOrder = sortingOrder++;
-                go.transform.localPosition = new Vector3(localX / ppu, localY / ppu, 0f);
+                string directory = Path.GetDirectoryName(_assetPath);
+                string imageFullPath = Path.Combine(directory, node.imagePath).Replace("\\", "/");
+
+                Sprite sprite = AssetDatabase.LoadAssetAtPath<Sprite>(imageFullPath);
+                if (sprite == null)
+                {
+                    throw new Exception($"Image node '{node.name}' references a missing or invalid image at '{imageFullPath}'. Asset must exist and be imported as a Sprite.");
+                }
+
+                if (_isUI)
+                {
+                    var image = go.AddComponent<Image>();
+                    image.sprite = sprite;
+                    image.SetNativeSize();
+
+                    var rect = go.GetComponent<RectTransform>();
+                    
+                    // Native UI Layout mapping (Top-Left origin assumption for 2D software)
+                    rect.pivot = new Vector2(0, 1);
+                    rect.anchorMin = new Vector2(0, 1);
+                    rect.anchorMax = new Vector2(0, 1);
+                    rect.anchoredPosition = new Vector2(node.bounds.x, -node.bounds.y);
+                }
+                else
+                {
+                    var renderer = go.AddComponent<SpriteRenderer>();
+                    renderer.sprite = sprite;
+                    renderer.sortingOrder = _sortingOrderTracker++;
+
+                    // World Space conversion utilizing PixelsPerUnit
+                    float docHalfWidth = _manifest.document.width / 2f;
+                    float docHalfHeight = _manifest.document.height / 2f;
+                    
+                    float centerX = (node.bounds.x + (node.bounds.width / 2f)) - docHalfWidth;
+                    float centerY = docHalfHeight - (node.bounds.y + (node.bounds.height / 2f));
+                    
+                    go.transform.localPosition = new Vector3(centerX / _ppu, centerY / _ppu, 0);
+                }
+            }
+
+            if (node.children != null)
+            {
+                foreach (var childNode in node.children)
+                {
+                    BuildNode(childNode, go.transform);
+                }
             }
         }
-
-        return sortingOrder;
     }
-    
-    #endregion
 }
