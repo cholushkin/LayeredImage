@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using UnityEditor.AssetImporters;
 using UnityEngine;
+using Newtonsoft.Json;
 
 namespace GameLib.LayeredImage
 {
@@ -25,7 +26,8 @@ namespace GameLib.LayeredImage
             try
             {
                 string json = File.ReadAllText(ctx.assetPath);
-                var manifest = JsonUtility.FromJson<LayeredImageManifest>(json);
+                
+                var manifest = JsonConvert.DeserializeObject<LayeredImageManifest>(json);
 
                 if (manifest == null)
                 {
