@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
@@ -34,13 +35,12 @@ namespace GameLib.LayeredImage
                 rect.sizeDelta = new Vector2(_manifest.document.width, _manifest.document.height);
             }
 
-            // Ordering Contract: Top-down traversal assigns increasing sorting layers.
-            // Earlier children in JSON render behind later children.
+            // Krita/Photoshop typically export top-down (top visual layer is first).
             _sortingOrderTracker = 0; 
 
             if (_manifest.children != null)
             {
-                foreach (var childNode in _manifest.children)
+                foreach (var childNode in Enumerable.Reverse(_manifest.children))
                 {
                     BuildNode(childNode, root.transform);
                 }
@@ -109,7 +109,7 @@ namespace GameLib.LayeredImage
 
             if (node.children != null)
             {
-                foreach (var childNode in node.children)
+                foreach (var childNode in Enumerable.Reverse(node.children))
                 {
                     BuildNode(childNode, go.transform);
                 }
