@@ -2,7 +2,7 @@ Below is a team-oriented README that combines **how to use the module** with the
 
 # LayeredImage
 
-![Logo](Documentation/Logo.jpg)
+![Logo](Documentation~/Logo.jpg)
 
 ## Introduction
 
@@ -629,12 +629,22 @@ LayeredImage/
 ├── Runtime/
 │   └── LayeredImageManifest.cs
 │
-├── Documentation/
+├── Documentation~/
 │   └── Logo.jpg
 │
 └── Textures/
     └── layered-image-logo.png
 ```
+
+## Installation
+
+Install directly from Git via Unity Package Manager (**Window → Package Manager → + → Install package from git URL…**):
+
+```
+https://github.com/cholushkin/LayeredImage.git
+```
+
+This package has no required third-party dependencies.
 
 ## LayeredImageImporter
 
