@@ -1,6 +1,6 @@
 {
   "name": "com.qcat.layeredimage",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "Layered Image",
   "description": "Unity Editor/runtime module for importing layered image documents (a custom .layeredimage JSON manifest format) into a hierarchy of Unity GameObjects with image and group layers.",
   "unity": "2021.3",
@@ -15,7 +15,9 @@
     "email": "cholushkin@gmail.com",
     "url": "https://sites.google.com/view/cholushkinmaximcard/home"
   },
-  "dependencies": {},
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  },
   "documentationUrl": "https://github.com/cholushkin/LayeredImage/blob/master/README.md",
   "changelogUrl": "https://github.com/cholushkin/LayeredImage/blob/master/CHANGELOG.md",
   "licensesUrl": "https://github.com/cholushkin/LayeredImage/blob/master/LICENSE"
